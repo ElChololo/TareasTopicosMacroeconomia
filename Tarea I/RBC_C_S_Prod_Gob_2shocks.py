@@ -1,7 +1,12 @@
 from Funciones_Utilidad import Funciones_Utilidad
 
-from Funcion_Produccion import Funcion_Produccion
+from Funciones_produccion import Funcion_Produccion
 
+from Residuos_Ecuaciones import Residuos_Ecuaciones_SS
+
+from Jacobiano_Newton import *
+
+import numpy as np
 class RBC_C_S_K_Prod_Gob_2shocks:
     def __init__(self,parametros,utilidad="Trabajo Inelastico"):
         if type(parametros)!=dict:
@@ -28,7 +33,7 @@ class RBC_C_S_K_Prod_Gob_2shocks:
         # Este metodo se encargará de resolver el estado estacionario del modelo. Será generalizado, por lo que para 
         # cualquier forma funcional de la utilidad, deberá encontrar el estado estacionario. Utilizará el método de newton
         # para resolver el sistema de ecuaciones
-       if self.__trabajo = False:
+       if self.__trabajo == False:
             # en este mundo habrán 7 ecuaciones y 7 incógnitas, lo primero será armaslas. Para ello necesitamos un guess inicial
             # Ahora bien, sabemos que en estado estacionario, el valor de la productividad estára en su media incondicional
             # Para esta tarea, la forma funcional es fija y da como resultado una media incondicional de 1
@@ -36,3 +41,12 @@ class RBC_C_S_K_Prod_Gob_2shocks:
             
             guess ={"Consumo_ss":1,"Capital_ss":1,"Tasa_Interes_ss":1,"Impuesto_ss":1, "Salario":1, "Gobierno":1}
             # Con estos guess debemos armar los valores que toman las ecuaciones del modelo del tipo F(x) = 0
+            valores_res = Residuos_Ecuaciones_SS()
+            # Ahora computamos el jacobiano de la expresión
+            jacobiano = Jacobiano_Newton()
+
+            #Realizamos el metodo de newton
+            guess_up = guess + np.ling_alg.inv(jacobiano) @ valores_res
+
+            # debiese converger en 1 sola iteración para el caso sin trabajo
+            return guess_up
