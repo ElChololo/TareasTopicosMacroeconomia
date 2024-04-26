@@ -9,7 +9,9 @@ def Residuos_Ecuaciones_SS(obj_utilidad,obj_producion,parametros,guess, Flag_tra
     
     # Sin trabajo el sistema tiene 6 ecuaciones (Productivdad de EE es 1 dado la forma funcional):
     if Flag_trabajo==False:
-        #Ecuacion de euler (debo cambiar porque la derivada de c a veces depende solo de C y otras tambien de L)
+        #Ecuacion de euler (debo cambiar porque la derivada de c a veces depende solo de C y otras tambien de L)-> lo controlo con el IF
+        # parametros
+        alpha,beta,sigma,delta,g_bar = parametros["alpha"],parametros["beta"],parametros["sigma"],parametros["delta"],parametros["g_bar"]
         res_ec_euler= res_Ec_Euler(obj_utilidad,C,C_prime,beta,tasa_interes)
         # Restriccion del individuo
         res_rest_indv=  res_rest_indv(K_prime,C,impuesto,salario,trabajo,tasa_interes,K)

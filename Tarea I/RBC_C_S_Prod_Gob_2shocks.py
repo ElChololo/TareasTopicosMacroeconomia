@@ -29,19 +29,22 @@ class RBC_C_S_K_Prod_Gob_2shocks:
             self.__obj_produccion = Funcion_Produccion(self.__parametros["alpha"],flag=False)
             self.__trabajo= True
 
-    def estado_estacionario(self):
+    def estado_estacionario(self,guess_inicial={"Consumo_ss":1,"Capital_ss":1,"Trabajo_ss":1,"Tasa_Interes_ss":1,"Impuesto_ss":1, "Salario":1, "Gobierno":1}):
         # Este metodo se encargará de resolver el estado estacionario del modelo. Será generalizado, por lo que para 
         # cualquier forma funcional de la utilidad, deberá encontrar el estado estacionario. Utilizará el método de newton
         # para resolver el sistema de ecuaciones
+        if guess_inicial !=dict:
+            raise("Se debe entregar un diccionario con los valores iniciales para computar el estado estacionario")
        if self.__trabajo == False:
             # en este mundo habrán 7 ecuaciones y 7 incógnitas, lo primero será armaslas. Para ello necesitamos un guess inicial
             # Ahora bien, sabemos que en estado estacionario, el valor de la productividad estára en su media incondicional
             # Para esta tarea, la forma funcional es fija y da como resultado una media incondicional de 1
             A_ss=1
             
-            guess ={"Consumo_ss":1,"Capital_ss":1,"Tasa_Interes_ss":1,"Impuesto_ss":1, "Salario":1, "Gobierno":1}
+            #En este caso, no necesitamos Trabajo en EE:
+            guess_inicial.pop("Trabajo_ss")
             # Con estos guess debemos armar los valores que toman las ecuaciones del modelo del tipo F(x) = 0
-            valores_res = Residuos_Ecuaciones_SS()
+            valores_res = Residuos_Ecuaciones_SS(self.__obj_utilidad,self.__obj_produccion,self.__parametros,guess_inicial,self.__trabajos)
             # Ahora computamos el jacobiano de la expresión
             jacobiano = Jacobiano_Newton()
 

@@ -20,30 +20,33 @@ def Derivada_Utilidad_No_Separable_L():
     return (C-psi * (L**(1+phi))/(1+phi))**((-1)*sigma) * (-1)*psi * (L**(phi))
 class Funciones_Utilidad():
 
-    def __init__(self,tipo="Trabajo Inelastico", **kargs):
+    def __init__(self,tipo="Trabajo Inelastico", **kwargs):
         self.funciones_admitidas=["Trabajo Inelastico", "Aversion al Riesgo Constante","No separable"]
         if tipo not in self.funciones_admitidas:
             raise("La función de utilidad especificada debe ser de los siguientes tres tipos:\n Trabajo Inelastico \n Aversion al Riesgo Constante \n No separable.\n")
         if tipo="Trabajo Inelastico":
             self.__imagen=Imagen_Trabajo_Inelastico
             self.__derivada_c= Derivada_Trabajo_Inelastico_C
+            self.__parametros=kwargs["sigma"]
         elif tipo ="Aversion al Riesgo Constante":
             self.__imagen = Imagen_CRRA_Separable
             self.__derivada_c=Derivada_Trabajo_Inelastico_C
             self.__derivada_l = Derivada_L_CRRA_Separable
+            self.__parametros ={"sigma":kwargs["sigma"],"phi":kwargs["phi"],"psi"; kwargs["psi"]}
         else:
             self.__imagen = Utilidad_No_Separable
             self.__derivada_c= Derivada_Utilidad_No_Separable_C
             self.__derivada_l= Derivada_Utilidad_No_Separable_L
+            self.__parametros ={"sigma":kwargs["sigma"],"phi":kwargs["phi"],"psi"; kwargs["psi"]}
     
     def get_valor(self,*args,**kargs):
-        valor=self.__imagen(*args)
+        valor=self.__imagen(args,kargs)
         return valor
 
-    def derivada_c(self,*args):
-        return self.__derivada_c(*args)
+    def derivada_c(self,*args,**kwargs):
+        return self.__derivada_c(args,kwargs)
     
-    def derivada_l(self,*args):
-        return self.__derivada_l(*args)
+    def derivada_l(self,*args,**kwargs):
+        return self.__derivada_l(args,kwargs)
 
 
