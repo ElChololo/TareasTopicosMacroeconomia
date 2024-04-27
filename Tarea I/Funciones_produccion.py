@@ -1,12 +1,10 @@
-def Produccion_Cobb_Douglas(obj_produccion,A,K,L):
-    alpha=obj_produccion.parametros
+def Produccion_Cobb_Douglas(alpha,A,K,L):
     return A* (K**(alpha)) * (L**(1-alpha))
 
-def Derivada_Prod_Cobb_Douglas_K(obj_produccion,A,K,L):
-    alpha=obj_produccion.parametros
+def Derivada_Prod_Cobb_Douglas_K(alpha,A,K,L):
     return A* alpha * K**(alpha-1) * L**(1-alpha)
 
-def Derivada_Prod_Cobb_Douglas_L(A,K,L,alpha):
+def Derivada_Prod_Cobb_Douglas_L(alpha,A,K,L):
     return A* (1-alpha) * K**(alpha) * L**((-1) * alpha)
 class Funcion_Produccion():
 
@@ -19,12 +17,15 @@ class Funcion_Produccion():
             self.__derivada_l = Derivada_Prod_Cobb_Douglas_L
         
 
-    def get_valor(self,obj_produccion,A,K,L):
-        return self.__valor(obj_produccion,A,K,L)
+    def get_valor(self,A,K,L):
+        alpha= self.parametros
+        return self.__valor(A,K,L)
 
-    def derivada_k(self,obj_produccion,A,K,L):
-        return self.__derivada_k(obj_produccion,A,K,L)
+    def derivada_k(self,A,K,L):
+        alpha=self.parametros
+        return self.__derivada_k(alpha,A,K,L)
     
-    def derivada_l(self,obj_produccion,*args):
-        return self.__derivada_l(obj_produccion,args)
+    def derivada_l(self,A,K,L):
+        alpha=self.parametros
+        return self.__derivada_l(alpha,A,K,L)
 
