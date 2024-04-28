@@ -1,4 +1,4 @@
-from Funciones_Utilidad import Funciones_Utilidad
+from Obj_Funciones_Utilidad import *
 
 from Funciones_produccion import Funcion_Produccion
 
@@ -15,20 +15,21 @@ class RBC_C_S_K_Prod_Gob_2shocks:
         self.__parametros={}
         self.__parametros_utilidad={}
         for key in parametros.keys():
-            self.__parametros[key] = parametros[key]
+            # Filtramos los parametros de utilidad de los parametros del modelo
             if key in ["sigma","psi","phi"]:
                 self.__parametros_utilidad[key] =parametros[key]
-
-        # Construimos un objeto que guardara el valor de la utilidad y sus derivadas
-        self.__obj_utilidad = Funciones_Utilidad(utilidad,**self.__parametros_utilidad)
-
-        # Construismos un objeto que guardara el valor de la produccion y sus utilidades
-        if utilidad == "Trabajo Inelastico":
-            self.__obj_produccion = Funcion_Produccion(self.__parametros["alpha"])
-            self.__trabajo= False
-        else:
-            self.__obj_produccion = Funcion_Produccion(self.__parametros["alpha"],flag=False)
-            self.__trabajo= True
+            else:
+                self.__parametros[key] = parametros[key]
+        self.__tipo_utilidad=utilidad
+        # Construimos un objeto que guardara el valor de la utilidad y sus derivadas, dependiendo del tipo de utilidad
+        if utilidad=="Trabajo Inelastico":
+            self.__obj_utilidad= Trabajo_Inelastico(self.__parametros_utilidad["sigma"])
+        elif utilidad=="CRRA separable":
+            self.__obj_utilidad= CRRA_separable(self.__parametros_utilidad["sigma"],self.__parametros_utilidad["phi"],self.__parametros_utilidad["psi"])
+        elif utilidad== "GHH nonseparable":
+            self.__obj_utilidad =GHH_nonseparable(self.__parametros_utilidad["sigma"],self.__parametros_utilidad["phi"],self.__parametros_utilidad["psi"])
+        # Creamos un objeto para almacenar la función de producción
+        self.__obj_produccion=Funcion_Produccion(self.__parametros["alpha"])
 
     def estado_estacionario(self,guess_inicial={"Consumo_ss":1,"Capital_ss":1,"Trabajo_ss":1,"Tasa_Interes_ss":1,"Impuesto_ss":1, "Salario_ss":1, "Gobierno_ss":1}):
         ''' Este metodo se encargará de resolver el estado estacionario del modelo. Será generalizado, por lo que para 
@@ -36,20 +37,78 @@ class RBC_C_S_K_Prod_Gob_2shocks:
         para resolver el sistema de ecuaciones'''
         if type(guess_inicial) !=dict:
             raise("Se debe entregar un diccionario con los valores iniciales para computar el estado estacionario")
+        
+        # Cuando la función de utilidad es con trabajo inelástico, cambia el número de ecuaciones del modelo
+        if self.__tipo_utilidad=="Trabajo Inelastico":
+            self.__trabajo=False
+        else:
+            self.__trabajo=True
+       
+        
         if self.__trabajo == False:
-            # en este mundo habrán 7 ecuaciones y 7 incógnitas, lo primero será armaslas. Para ello necesitamos un guess inicial
+            #Implementamos el algoritmo de newton, para ello, necesito la primera iteración
+            #Convención de orden de la matriz guess_inicial: C,K,r,t,W,G
 
-
-            
-            #En este caso, no necesitamos Trabajo en EE:
-            guess_inicial.pop("Trabajo_ss","No hay trabajo EE")
-            # Con estos guess debemos armar los valores que toman las ecuaciones del modelo del tipo F(x) = 0
+            # Dado el guess debemos armar los valores que toman las ecuaciones del modelo del tipo F(x) = 0
             valores_res = Residuos_Ecuaciones_SS(self.__obj_utilidad,self.__obj_produccion,self.__parametros,guess_inicial,self.__trabajo)
             # Ahora computamos el jacobiano de la expresión
             jacobiano = Jacobiano_Newton(self.__obj_utilidad,self.__obj_produccion,self.__parametros,guess_inicial,self.__trabajo)
+            #Botamos el trabajo
+            guess_inicial.pop("Trabajo_ss","No hay trabajo en el guess inicial")
+            # Armo el guess inicial como array
             array_guess = np.array(list(guess_inicial.values()))
-            #Realizamos el metodo de newton
-            guess_up = array_guess + np.linalg.inv(jacobiano) @ valores_res
+            print("Iteración 0\n")
+            print(array_guess)
+            # Realizo el paso del algoritmo
+            guess_up = array_guess - np.linalg.inv(jacobiano) @ valores_res
+            print(guess_up)
+            # Este será mi nuevo guess,debo armarlo como diccionario:
+            guess_inicial={"Consumo_ss":guess_up[0],"Capital_ss":guess_up[1],"Trabajo_ss":1,"Tasa_Interes_ss":guess_up[2],"Impuesto_ss":guess_up[3], "Salario_ss":guess_up[4], "Gobierno_ss":guess_up[5]}
+            #ahora debo imponer la restriccion de convergencia
+            
+            iteracion=0
+            while np.abs(np.linalg.norm(array_guess)-np.linalg.norm(guess_up))>1e-6:
+                valores_res = Residuos_Ecuaciones_SS(self.__obj_utilidad,self.__obj_produccion,self.__parametros,guess_inicial,self.__trabajo)
+                jacobiano = Jacobiano_Newton(self.__obj_utilidad,self.__obj_produccion,self.__parametros,guess_inicial,self.__trabajo)
+                guess_inicial.pop("Trabajo_ss","No hay trabajo en el guess inicial")
+                array_guess = np.array(list(guess_inicial.values()))
+                guess_up = array_guess - np.linalg.inv(jacobiano) @ valores_res
+                guess_inicial={"Consumo_ss":guess_up[0],"Capital_ss":guess_up[1],"Trabajo_ss":1,"Tasa_Interes_ss":guess_up[2],"Impuesto_ss":guess_up[3], "Salario_ss":guess_up[4], "Gobierno_ss":guess_up[5]}
+                iteracion+=1
+                print("Iteracion: {}\n".format(iteracion))
+                print(array_guess)
+                print(guess_up)
+                if iteracion >1000:
+                    break
+            return guess_up
+        else:
+            #Convención de orden de la matriz guess_inicial: C,K,L,r,t,W,G
+            ## Caso de las funciones utilidad con trabajo
+            valores_res = Residuos_Ecuaciones_SS(self.__obj_utilidad,self.__obj_produccion,self.__parametros,guess_inicial,self.__trabajo)
+            # Ahora computamos el jacobiano de la expresión
+            jacobiano = Jacobiano_Newton(self.__obj_utilidad,self.__obj_produccion,self.__parametros,guess_inicial,self.__trabajo)
+            # Armo el guess inicial como array
+            array_guess = np.array(list(guess_inicial.values()))
+            print("Iteración 0\n")
+            print(array_guess)
+            # Realizo el paso del algoritmo
+            guess_up = array_guess - np.linalg.inv(jacobiano) @ valores_res
+            # Este será mi nuevo guess,debo armarlo como diccionario:
+            guess_inicial={"Consumo_ss":guess_up[0],"Capital_ss":guess_up[1],"Trabajo_ss":guess_up[2],"Tasa_Interes_ss":guess_up[3],"Impuesto_ss":guess_up[4], "Salario_ss":guess_up[5], "Gobierno_ss":guess_up[6]}
+            #ahora debo imponer la restriccion de convergencia
+            print(guess_up)
+            iteracion=0
+            while np.abs(np.linalg.norm(array_guess)-np.linalg.norm(guess_up))>1e-2:
 
-            # debiese converger en 1 sola iteración para el caso sin trabajo
+                valores_res = Residuos_Ecuaciones_SS(self.__obj_utilidad,self.__obj_produccion,self.__parametros,guess_inicial,self.__trabajo)
+                jacobiano = Jacobiano_Newton(self.__obj_utilidad,self.__obj_produccion,self.__parametros,guess_inicial,self.__trabajo)
+                array_guess = np.array(list(guess_inicial.values()))
+                guess_up = array_guess - np.linalg.inv(jacobiano) @ valores_res
+                guess_inicial={"Consumo_ss":guess_up[0],"Capital_ss":guess_up[1],"Trabajo_ss":1,"Tasa_Interes_ss":guess_up[2],"Impuesto_ss":guess_up[3], "Salario_ss":guess_up[4], "Gobierno_ss":guess_up[5]}
+                iteracion+=1
+                print("Iteracion: {}\n".format(iteracion))
+                print(array_guess)
+                print(guess_up)
+                if iteracion >1000:
+                    break
             return guess_up
